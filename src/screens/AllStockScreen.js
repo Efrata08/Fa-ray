@@ -56,7 +56,7 @@ function MedRow({ med, onPress }) {
 // ── screen ─────────────────────────────────────────────────────────────────────
 
 export default function AllStockScreen({ navigation }) {
-  const { medicines } = useStore();
+  const { medicines, currentTransaction } = useStore();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
 
@@ -118,6 +118,19 @@ export default function AllStockScreen({ navigation }) {
           )}
         </View>
       </View>
+
+      {/* Transaction banner */}
+      {currentTransaction.length > 0 && (
+        <View style={styles.txBanner}>
+          <Text style={styles.txBannerLeft}>
+            {currentTransaction.length} item{currentTransaction.length !== 1 ? 's' : ''} in transaction
+            {' · '}ETB {currentTransaction.reduce((s, i) => s + i.lineTotal, 0).toFixed(2)}
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('SaleRecorded')}>
+            <Text style={styles.txBannerFinish}>ጨርስ · Finish</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
         {searching && (
@@ -199,6 +212,18 @@ const styles = StyleSheet.create({
   },
   noResultsIcon: { fontSize: 28, marginBottom: 10 },
   noResultsText: { fontSize: 13, color: '#BBB', textAlign: 'center' },
+
+  // Transaction banner
+  txBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A5C35',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  txBannerLeft: { fontSize: 12, color: '#fff', flex: 1 },
+  txBannerFinish: { fontSize: 12, color: '#fff', textDecorationLine: 'underline' },
 
   // Rows
   row: {

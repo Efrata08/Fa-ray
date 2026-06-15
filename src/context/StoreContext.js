@@ -27,6 +27,7 @@ const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
   const [medicines, setMedicines] = useState(INITIAL_MEDICINES);
+  const [currentTransaction, setCurrentTransaction] = useState([]);
 
   function recordSale(id, qty) {
     setMedicines(prev =>
@@ -44,8 +45,17 @@ export function StoreProvider({ children }) {
     );
   }
 
+  function addToTransaction(item) {
+    recordSale(item.medicineId, item.quantity);
+    setCurrentTransaction(prev => [...prev, item]);
+  }
+
+  function clearTransaction() {
+    setCurrentTransaction([]);
+  }
+
   return (
-    <StoreContext.Provider value={{ medicines, recordSale, recordRestock }}>
+    <StoreContext.Provider value={{ medicines, recordSale, recordRestock, currentTransaction, addToTransaction, clearTransaction }}>
       {children}
     </StoreContext.Provider>
   );
