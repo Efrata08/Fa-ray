@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, StatusBar, Alert,
+  View, Text, TouchableOpacity, StyleSheet, StatusBar, Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,7 +28,7 @@ function PinDots({ entered, error }) {
 
 export default function PinLoginScreen() {
   const insets = useSafeAreaInsets();
-  const { loginSuccess, pharmacyName } = useAuth();
+  const { loginSuccess, pharmacyName, resetToOnboarding } = useAuth();
 
   const [pin, setPin]         = useState('');
   const [error, setError]     = useState('');
@@ -81,6 +81,17 @@ export default function PinLoginScreen() {
     Alert.alert('Recovery coming soon', '', [{ text: 'OK' }]);
   }
 
+  function devReset() {
+    Alert.alert(
+      'Dev: Reset onboarding',
+      'Clears all saved data and restarts onboarding.',
+      [
+        { text: 'Reset', style: 'destructive', onPress: resetToOnboarding },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A5C35" />
@@ -112,6 +123,12 @@ export default function PinLoginScreen() {
           <Text style={styles.lockedText}>Locked. Please wait 30 seconds.</Text>
         ) : (
           <View style={{ height: 18 }} />
+        )}
+
+        {__DEV__ && (
+          <TouchableOpacity onPress={devReset} style={styles.devBtn}>
+            <Text style={styles.devBtnText}>⚙ Dev: Reset onboarding</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -146,4 +163,7 @@ const styles = StyleSheet.create({
 
   errorText:  { fontSize: 11, color: '#A32D2D', marginTop: 10, textAlign: 'center' },
   lockedText: { fontSize: 11, color: '#888', marginTop: 10, textAlign: 'center' },
+
+  devBtn:     { marginTop: 24, paddingVertical: 6, paddingHorizontal: 12 },
+  devBtnText: { fontSize: 10, color: '#CCC', textAlign: 'center' },
 });

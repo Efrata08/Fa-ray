@@ -42,8 +42,23 @@ export function AuthProvider({ children }) {
     setAuthState('login');
   }
 
+  function logout() {
+    setAuthState('login');
+  }
+
+  async function resetToOnboarding() {
+    await AsyncStorage.multiRemove([
+      'faray_setup_complete',
+      'faray_pharmacy_profile',
+      'faray_pin',
+      'faray_medicines',
+    ]);
+    setPharmacyName('');
+    setAuthState('onboarding');
+  }
+
   return (
-    <AuthContext.Provider value={{ authState, pharmacyName, completeOnboarding, loginSuccess, skipToLogin }}>
+    <AuthContext.Provider value={{ authState, pharmacyName, completeOnboarding, loginSuccess, skipToLogin, logout, resetToOnboarding }}>
       {children}
     </AuthContext.Provider>
   );

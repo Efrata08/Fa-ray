@@ -6,6 +6,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -84,6 +85,7 @@ function AttentionRow({ med, onPress }) {
 
 export default function StockListScreen({ navigation }) {
   const { medicines } = useStore();
+  const { pharmacyName, logout } = useAuth();
   const insets = useSafeAreaInsets();
 
   const attentionMeds = medicines
@@ -103,11 +105,18 @@ export default function StockListScreen({ navigation }) {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View>
-          <Text style={styles.headerTitle}>ፍሬ</Text>
-          <Text style={styles.headerSub}>Fa-ray · ዕቃ ክምችት</Text>
+          <Text style={styles.headerTitle}>{pharmacyName || 'ፍሬ'}</Text>
+          <Text style={styles.headerSub}>ዕቃ ክምችት · Inventory</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('የፕሮፋይል ገጽ · Profile coming soon')}
+          onPress={() => Alert.alert(
+            pharmacyName || 'ፍሬ',
+            '',
+            [
+              { text: 'Log out', style: 'destructive', onPress: logout },
+              { text: 'Cancel', style: 'cancel' },
+            ]
+          )}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ProfileIcon />

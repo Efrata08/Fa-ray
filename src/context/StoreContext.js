@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function timestamp() {
   const now = new Date();
@@ -49,8 +50,24 @@ async function scheduleStockAlert(medicine, newStock) {
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
+  // Start with the full list so nothing is null while AsyncStorage loads.
+  // The effect below immediately replaces this with whatever the pharmacist
+  // saved during onboarding (faray_medicines). If nothing was saved yet,
+  // INITIAL_MEDICINES stays as the fallback.
   const [medicines, setMedicines] = useState(INITIAL_MEDICINES);
   const [currentTransaction, setCurrentTransaction] = useState([]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('faray_medicines').then(raw => {
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw);
+        if (Array.isArray(saved) && saved.length > 0) {
+          setMedicines(saved);
+        }
+      } catch {}
+    });
+  }, []);
 
   function recordSale(id, qty) {
     setMedicines(prev => {
