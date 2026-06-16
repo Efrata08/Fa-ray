@@ -3,10 +3,11 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   StatusBar, Alert, Dimensions,
 } from 'react-native';
-
-const SCREEN_HEIGHT = Dimensions.get('window').height;
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -16,19 +17,7 @@ function getStatus(med) {
   return 'ok';
 }
 
-const STATUS_COLOR = {
-  ok: '#3B6D11',
-  reorder: '#BA7517',
-  critical: '#A32D2D',
-};
-
-const ROW_BG = {
-  critical: '#FFF5F5',
-  reorder: '#FFFBEB',
-  ok: '#fff',
-};
-
-// ── sub-components ─────────────────────────────────────────────────────────────
+// ── ProfileIcon (view-drawn) ───────────────────────────────────────────────────
 
 function ProfileIcon() {
   return (
@@ -45,42 +34,11 @@ const pi = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#fff',
     alignItems: 'center', overflow: 'hidden',
   },
-  head: {
-    width: 9, height: 9, borderRadius: 4.5,
-    backgroundColor: '#fff',
-    marginTop: 4,
-  },
-  body: {
-    width: 18, height: 10, borderRadius: 9,
-    backgroundColor: '#fff',
-    marginTop: 2,
-  },
+  head: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#fff', marginTop: 4 },
+  body: { width: 18, height: 10, borderRadius: 9, backgroundColor: '#fff', marginTop: 2 },
 });
 
-// Package icon: box outline with a horizontal stripe near the top
-function PackageIcon() {
-  return (
-    <View style={pkg.box}>
-      <View style={pkg.stripe} />
-    </View>
-  );
-}
-
-const pkg = StyleSheet.create({
-  box: {
-    width: 36, height: 36,
-    borderWidth: 2, borderColor: '#1A5C35',
-    borderRadius: 4,
-    overflow: 'hidden',
-    justifyContent: 'flex-start',
-  },
-  stripe: {
-    width: '100%',
-    height: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: '#1A5C35',
-  },
-});
+// ── SectionDivider ─────────────────────────────────────────────────────────────
 
 function SectionDivider({ title }) {
   return (
@@ -93,34 +51,29 @@ function SectionDivider({ title }) {
 }
 
 const sd = StyleSheet.create({
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
   line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#D4D4D4' },
-  text: {
-    fontSize: 11, fontWeight: '500', color: '#999',
-    marginHorizontal: 10, letterSpacing: 0.4,
-  },
+  text: { fontSize: 11, fontWeight: '500', color: '#999', marginHorizontal: 10, letterSpacing: 0.4 },
 });
 
-function MedRow({ med, onPress }) {
-  const status = getStatus(med);
-  const color = STATUS_COLOR[status];
+// ── AttentionRow ───────────────────────────────────────────────────────────────
+
+function AttentionRow({ med, onPress }) {
+  const isCritical = getStatus(med) === 'critical';
+  const dotColor   = isCritical ? '#A32D2D' : '#BA7517';
+  const stockColor = isCritical ? '#A32D2D' : '#BA7517';
+  const stockSize  = isCritical ? 24 : 20;
+  const nameSize   = isCritical ? 15 : 14;
 
   return (
-    <TouchableOpacity
-      style={[styles.row, { backgroundColor: ROW_BG[status] }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={[styles.dot, { backgroundColor: color }]} />
+    <TouchableOpacity style={styles.attentionRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.dot, { backgroundColor: dotColor }]} />
       <View style={styles.rowInfo}>
-        <Text style={styles.rowAmharic}>{med.amharic}</Text>
+        <Text style={[styles.rowAmharic, { fontSize: nameSize }]}>{med.amharic}</Text>
         <Text style={styles.rowEnglish}>{med.name} · {med.code}</Text>
       </View>
       <View style={styles.stockCol}>
-        <Text style={[styles.stockNum, { color }]}>{med.stock}</Text>
+        <Text style={[styles.stockNum, { fontSize: stockSize, color: stockColor }]}>{med.stock}</Text>
         <Text style={styles.stockUnits}>units</Text>
       </View>
     </TouchableOpacity>
@@ -140,13 +93,16 @@ export default function StockListScreen({ navigation }) {
       return order[getStatus(a)] - order[getStatus(b)];
     });
 
+  const isEmpty  = attentionMeds.length === 0;
+  const isSingle = attentionMeds.length === 1;
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A5C35" />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <View style={styles.headerLeft}>
+        <View>
           <Text style={styles.headerTitle}>ፍሬ</Text>
           <Text style={styles.headerSub}>Fa-ray · ዕቃ ክምችት</Text>
         </View>
@@ -158,36 +114,54 @@ export default function StockListScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Go to all stock */}
-      <View style={styles.allStockWrap}>
+      <ScrollView style={{ flex: 1 }}>
+        {/* All stock button */}
         <TouchableOpacity
           style={styles.allStockBtn}
           onPress={() => navigation.navigate('AllStock')}
           activeOpacity={0.75}
         >
-          <PackageIcon />
-          <Text style={styles.allStockText}>ሁሉም ክምችት · Go to all stock</Text>
-          <Text style={styles.chevron}>›</Text>
+          <View style={styles.allStockLeft}>
+            <Feather name="package" size={20} color="#1A5C35" style={{ marginRight: 12 }} />
+            <View>
+              <Text style={styles.allStockTitle}>ሁሉም ክምችት · All stock</Text>
+              <Text style={styles.allStockSub}>{medicines.length} medicines</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={17} color="#1A5C35" />
         </TouchableOpacity>
-      </View>
 
-      <ScrollView style={{ flex: 1 }}>
+        {/* Attention section */}
         <SectionDivider title="ትኩረት · Attention" />
 
-        {attentionMeds.length === 0 ? (
-          <View style={styles.allOk}>
-            <Text style={styles.allOkCheck}>✓</Text>
-            <Text style={styles.allOkText}>ሁሉም ጥሩ ነው · All stock is OK</Text>
-          </View>
-        ) : (
-          attentionMeds.map(med => (
-            <MedRow
-              key={med.id}
-              med={med}
-              onPress={() => navigation.navigate('MedicineDetail', { medicineId: med.id })}
-            />
-          ))
-        )}
+        <View style={[styles.attentionSection, isEmpty && styles.attentionSectionEmpty]}>
+          {isEmpty ? (
+            /* Empty state — centered inside minHeight container */
+            <View style={styles.emptyState}>
+              <View style={styles.emptyCircle}>
+                <Feather name="check-circle" size={22} color="#1A5C35" />
+              </View>
+              <Text style={styles.emptyTitle}>ሁሉም ጥሩ ነው</Text>
+              <Text style={styles.emptySubtitle}>All stock is OK</Text>
+              <Text style={styles.emptyNote}>No medicines need attention today</Text>
+            </View>
+          ) : (
+            <>
+              {attentionMeds.map((med, index) => (
+                <View key={med.id}>
+                  <AttentionRow
+                    med={med}
+                    onPress={() => navigation.navigate('MedicineDetail', { medicineId: med.id })}
+                  />
+                  {index < attentionMeds.length - 1 && <View style={styles.rowDivider} />}
+                </View>
+              ))}
+              {isSingle && (
+                <Text style={styles.singleLabel}>1 medicine needs attention</Text>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -207,58 +181,67 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
   },
-  headerLeft: {},
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '500' },
   headerSub: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 },
 
   // All stock button
-  allStockWrap: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff',
-  },
   allStockBtn: {
-    minHeight: SCREEN_HEIGHT * 0.30,
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
-    backgroundColor: '#F0F7EC',
-    borderWidth: 1,
-    borderColor: '#C3D9B0',
-    borderRadius: 16,
+    justifyContent: 'space-between',
+    backgroundColor: '#EAF3DE',
+    borderWidth: 1.5,
+    borderColor: '#1A5C35',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginVertical: 12,
+    marginHorizontal: 14,
   },
-  allStockText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#1A5C35',
-    marginTop: 14,
-  },
-  chevron: { fontSize: 22, color: '#7AAE5A', marginTop: 6 },
+  allStockLeft: { flexDirection: 'row', alignItems: 'center' },
+  allStockTitle: { fontSize: 14, fontWeight: '500', color: '#1A5C35' },
+  allStockSub: { fontSize: 11, color: '#3B6D11', marginTop: 2 },
+
+  // Attention section container
+  attentionSection: { minHeight: SCREEN_HEIGHT * 0.35 },
+  attentionSectionEmpty: { justifyContent: 'center', alignItems: 'center' },
 
   // Attention rows
-  row: {
+  attentionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 13,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EBEBEB',
+    backgroundColor: '#fff',
   },
   dot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
   rowInfo: { flex: 1 },
-  rowAmharic: { fontSize: 15, fontWeight: '500', color: '#111' },
+  rowAmharic: { fontWeight: '500', color: '#111' },
   rowEnglish: { fontSize: 11, color: '#999', marginTop: 2 },
   stockCol: { alignItems: 'flex-end', minWidth: 44 },
-  stockNum: { fontSize: 22, fontWeight: '500' },
+  stockNum: { fontWeight: '500' },
   stockUnits: { fontSize: 10, color: '#AAA', marginTop: 1 },
+  rowDivider: { height: 0.5, backgroundColor: '#E5E5E5', marginLeft: 36 },
 
-  // All OK empty state
-  allOk: {
-    alignItems: 'center',
-    paddingTop: 56,
-    paddingBottom: 32,
+  // Single item label
+  singleLabel: {
+    fontSize: 10,
+    color: '#BBB',
+    textAlign: 'center',
+    paddingVertical: 16,
   },
-  allOkCheck: { fontSize: 36, color: '#3B6D11', marginBottom: 10 },
-  allOkText: { fontSize: 13, color: '#BBB', textAlign: 'center' },
+
+  // Empty state
+  emptyState: { alignItems: 'center' },
+  emptyCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#EAF3DE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: { fontSize: 14, fontWeight: '500', color: '#111', marginTop: 12 },
+  emptySubtitle: { fontSize: 11, color: '#888', marginTop: 4 },
+  emptyNote: { fontSize: 10, color: '#BBB', marginTop: 3 },
 });

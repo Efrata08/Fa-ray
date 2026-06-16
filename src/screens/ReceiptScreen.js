@@ -35,7 +35,7 @@ export default function ReceiptScreen({ route, navigation }) {
         <View style={styles.card}>
           {/* Header */}
           <Text style={styles.brand}>ፍሬ</Text>
-          <Text style={styles.brandSub}>Fa-ray Pharmacy</Text>
+          <Text style={styles.brandSub}>Your Pharmacy Name</Text>
           <View style={styles.dashedDivider} />
 
           {/* Items */}
@@ -66,6 +66,9 @@ export default function ReceiptScreen({ route, navigation }) {
 
           {/* Footer */}
           <Text style={styles.thankYou}>አመሰግናለሁ · Thank you</Text>
+
+          <View style={styles.poweredDivider} />
+          <Text style={styles.poweredBy}>Powered by ፍሬ</Text>
         </View>
 
         {/* Buttons */}
@@ -121,6 +124,8 @@ const styles = StyleSheet.create({
 
   dateText: { fontSize: 12, color: '#AAA', marginTop: 4, textAlign: 'center' },
   thankYou: { fontSize: 13, color: '#555', marginTop: 12, fontWeight: '500', textAlign: 'center' },
+  poweredDivider: { height: 0.5, backgroundColor: '#E5E5E5', width: '100%', marginTop: 14 },
+  poweredBy: { fontSize: 10, color: '#CCC', textAlign: 'center', marginTop: 6, marginBottom: 4 },
 
   printBtn: {
     width: '100%',
