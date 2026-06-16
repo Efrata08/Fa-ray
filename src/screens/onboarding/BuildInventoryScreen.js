@@ -6,7 +6,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStore } from '../../context/StoreContext';
+import { MEDICINE_CATALOG } from '../../data/medicineCatalog';
 
 function Chip({ med, onRemove }) {
   return (
@@ -37,7 +37,7 @@ function SuggestionRow({ med, onAdd }) {
 
 export default function BuildInventoryScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { medicines } = useStore();
+  const medicines = MEDICINE_CATALOG;
 
   const [selected, setSelected]         = useState([]);
   const [query, setQuery]               = useState('');
