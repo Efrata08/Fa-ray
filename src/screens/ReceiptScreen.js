@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
 
@@ -18,6 +19,14 @@ export default function ReceiptScreen({ route, navigation }) {
   const { transactions, grandTotal } = route.params;
   const { clearTransaction } = useStore();
   const insets = useSafeAreaInsets();
+  const [pharmacyName, setPharmacyName] = useState('');
+
+  useEffect(() => {
+    AsyncStorage.getItem('faray_pharmacy_profile').then(raw => {
+      if (!raw) return;
+      try { setPharmacyName(JSON.parse(raw).name || ''); } catch {}
+    });
+  }, []);
 
   function handleNewSale() {
     clearTransaction();
@@ -34,8 +43,7 @@ export default function ReceiptScreen({ route, navigation }) {
         {/* Receipt card */}
         <View style={styles.card}>
           {/* Header */}
-          <Text style={styles.brand}>ፍሬ</Text>
-          <Text style={styles.brandSub}>Your Pharmacy Name</Text>
+          <Text style={styles.pharmacyName}>{pharmacyName || 'Your Pharmacy'}</Text>
           <View style={styles.dashedDivider} />
 
           {/* Items */}
@@ -101,8 +109,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  brand: { fontSize: 26, fontWeight: '700', color: '#1A5C35', textAlign: 'center' },
-  brandSub: { fontSize: 12, color: '#888', marginTop: 2, marginBottom: 14, textAlign: 'center' },
+  pharmacyName: { fontSize: 15, fontWeight: '600', color: '#111', textAlign: 'center', marginBottom: 4 },
 
   dashedDivider: {
     width: '100%',

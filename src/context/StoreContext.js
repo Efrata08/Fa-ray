@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import * as Notifications from 'expo-notifications';
 
 function timestamp() {
   const now = new Date();
@@ -23,6 +24,28 @@ const INITIAL_MEDICINES = [
   { id: 12, name: 'Mebendazole 100mg',      amharic: 'ሜቤንዳዞ 100 ሚ.ግ',      code: 'MBZ100',  stock: 33, reorder: 15, price: 9,  activity: [] },
 ];
 
+async function scheduleStockAlert(medicine, newStock) {
+  let title, body;
+
+  if (newStock <= 0) {
+    title = 'ክምችት አልቋል · Out of stock';
+    body  = `${medicine.amharic} — ${medicine.name} is completely out of stock`;
+  } else if (newStock <= medicine.reorder * 0.4) {
+    title = '⚠ ወሳኝ · Critical stock';
+    body  = `${medicine.amharic} — only ${newStock} units remaining`;
+  } else if (newStock === medicine.reorder) {
+    title = 'ክምችት እያነሰ ነው · Low stock';
+    body  = `${medicine.amharic} — ${medicine.name} has reached reorder point (${newStock} units)`;
+  } else {
+    return; // no threshold crossed
+  }
+
+  await Notifications.scheduleNotificationAsync({
+    content: { title, body, sound: true },
+    trigger: null,
+  });
+}
+
 const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
@@ -30,11 +53,26 @@ export function StoreProvider({ children }) {
   const [currentTransaction, setCurrentTransaction] = useState([]);
 
   function recordSale(id, qty) {
-    setMedicines(prev =>
-      prev.map(m => m.id === id
-        ? { ...m, stock: m.stock - qty, activity: [{ type: 'sale', qty, time: timestamp() }, ...m.activity] }
-        : m)
-    );
+    setMedicines(prev => {
+      const updated = prev.map(m => {
+        if (m.id !== id) return m;
+        const newStock   = m.stock - qty;
+        const oldCrit    = m.stock  <= m.reorder * 0.4;
+        const newCrit    = newStock  <= m.reorder * 0.4;
+        const oldReorder = m.stock  <= m.reorder;
+        const newReorder = newStock  <= m.reorder;
+        const newOut     = newStock  <= 0;
+        const oldOut     = m.stock   <= 0;
+
+        // Fire only when crossing into a new (worse) threshold
+        if ((!oldOut && newOut) || (!oldCrit && newCrit) || (!oldReorder && newReorder)) {
+          scheduleStockAlert(m, newStock);
+        }
+
+        return { ...m, stock: newStock, activity: [{ type: 'sale', qty, time: timestamp() }, ...m.activity] };
+      });
+      return updated;
+    });
   }
 
   function recordRestock(id, qty) {
