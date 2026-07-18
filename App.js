@@ -26,8 +26,8 @@ import AllStockScreen       from './src/screens/AllStockScreen';
 import MedicineDetailScreen from './src/screens/MedicineDetailScreen';
 import SaleEntryScreen      from './src/screens/SaleEntryScreen';
 import RestockEntryScreen   from './src/screens/RestockEntryScreen';
-import SaleRecordedScreen   from './src/screens/SaleRecordedScreen';
-import ReceiptScreen        from './src/screens/ReceiptScreen';
+import AnalyticsScreen      from './src/screens/AnalyticsScreen';
+import AddMedicineScreen    from './src/screens/AddMedicineScreen';
 
 // ── Notifications setup (module-level so handler is registered before any notification arrives)
 Notifications.setNotificationHandler({
@@ -78,8 +78,8 @@ function AppNavigator() {
             <Stack.Screen name="MedicineDetail" component={MedicineDetailScreen} />
             <Stack.Screen name="SaleEntry"      component={SaleEntryScreen} />
             <Stack.Screen name="RestockEntry"   component={RestockEntryScreen} />
-            <Stack.Screen name="SaleRecorded"   component={SaleRecordedScreen} />
-            <Stack.Screen name="Receipt"        component={ReceiptScreen} />
+            <Stack.Screen name="Analytics"      component={AnalyticsScreen} />
+            <Stack.Screen name="AddMedicine"    component={AddMedicineScreen} />
           </>
         )}
       </Stack.Navigator>

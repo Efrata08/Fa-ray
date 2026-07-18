@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  StatusBar, KeyboardAvoidingView, Platform, Alert,
+  StatusBar, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MEDICINE_CATALOG } from '../../data/medicineCatalog';
-import { useStore } from '../../context/StoreContext';
+import { MEDICINE_CATALOG } from '../data/medicineCatalog';
+import { useStore } from '../context/StoreContext';
 
 function Chip({ med, onRemove }) {
   return (
@@ -35,10 +35,9 @@ function SuggestionRow({ med, onAdd }) {
   );
 }
 
-export default function BuildInventoryScreen({ navigation }) {
+export default function AddMedicineScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { setInventory } = useStore();
-  const medicines = MEDICINE_CATALOG;
+  const { medicines, addMedicines } = useStore();
 
   const [selected, setSelected]         = useState([]);
   const [query, setQuery]               = useState('');
@@ -49,11 +48,15 @@ export default function BuildInventoryScreen({ navigation }) {
   const [pendingMed, setPendingMed]     = useState(null); // catalog item awaiting a price before it's added
   const [pendingPrice, setPendingPrice] = useState('');
 
+  // Catalog entries already carried in this pharmacy's live inventory —
+  // onboarding stores the catalog item's own numeric id, so matching on id
+  // is exact (custom items use string ids and never collide with these).
+  const ownedIds = new Set(medicines.filter(m => typeof m.id === 'number').map(m => m.id));
   const selectedIds = new Set(selected.map(m => m.id));
 
   const q = query.trim().toLowerCase();
-  const available = medicines
-    .filter(m => !selectedIds.has(m.id))
+  const available = MEDICINE_CATALOG
+    .filter(m => !ownedIds.has(m.id) && !selectedIds.has(m.id))
     .filter(m =>
       q === '' ||
       m.name.toLowerCase().includes(q) ||
@@ -101,8 +104,9 @@ export default function BuildInventoryScreen({ navigation }) {
   }
 
   function handleDone() {
-    setInventory(selected);
-    navigation.navigate('AllSet');
+    if (selected.length === 0) return;
+    addMedicines(selected);
+    navigation.goBack();
   }
 
   return (
@@ -118,7 +122,7 @@ export default function BuildInventoryScreen({ navigation }) {
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.brand}>ፍሬ</Text>
-        <Text style={styles.stepLabel}>Step 3 of 3</Text>
+        <View style={{ width: 20 }} />
       </View>
 
       <KeyboardAvoidingView
@@ -127,8 +131,8 @@ export default function BuildInventoryScreen({ navigation }) {
       >
         {/* Static top area */}
         <View style={styles.topArea}>
-          <Text style={styles.title}>ክምችትዎን ያዋቅሩ</Text>
-          <Text style={styles.subtitle}>Add the medicines you carry</Text>
+          <Text style={styles.title}>መድሃኒት ጨምር</Text>
+          <Text style={styles.subtitle}>Add medicine to your inventory</Text>
 
           {/* Search */}
           <View style={styles.searchRow}>
@@ -227,7 +231,7 @@ export default function BuildInventoryScreen({ navigation }) {
           {/* Selected chips */}
           {selected.length > 0 && (
             <View style={styles.chipsSection}>
-              <Text style={styles.addedLabel}>Added ({selected.length})</Text>
+              <Text style={styles.addedLabel}>Adding ({selected.length})</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
                 {selected.map(m => (
                   <Chip key={m.id} med={m} onRemove={() => removeMed(m.id)} />
@@ -245,13 +249,24 @@ export default function BuildInventoryScreen({ navigation }) {
             <SuggestionRow key={med.id} med={med} onAdd={() => startAddMed(med)} />
           ))}
 
+          {available.length === 0 && q !== '' && (
+            <Text style={styles.noResults}>No results · already in your inventory or not in the catalog</Text>
+          )}
+
           <View style={{ height: 24 }} />
         </ScrollView>
 
         {/* Fixed footer */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-          <TouchableOpacity style={styles.doneBtn} onPress={handleDone} activeOpacity={0.8}>
-            <Text style={styles.doneBtnText}>ጨርስ · Done</Text>
+          <TouchableOpacity
+            style={[styles.doneBtn, selected.length === 0 && styles.doneBtnDisabled]}
+            onPress={handleDone}
+            activeOpacity={0.8}
+            disabled={selected.length === 0}
+          >
+            <Text style={styles.doneBtnText}>
+              {selected.length === 0 ? 'ጨምር · Add' : `ጨምር · Add ${selected.length}`}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -272,7 +287,6 @@ const styles = StyleSheet.create({
   },
   backArrow: { color: '#fff', fontSize: 20 },
   brand:     { fontSize: 14, fontWeight: '500', color: '#fff' },
-  stepLabel: { fontSize: 10, color: 'rgba(255,255,255,0.6)' },
 
   topArea: { paddingHorizontal: 12, paddingTop: 12 },
 
@@ -335,6 +349,8 @@ const styles = StyleSheet.create({
   suggAmharic: { fontSize: 11, fontWeight: '500', color: '#111' },
   suggEnglish: { fontSize: 10, color: '#999', marginTop: 1 },
 
+  noResults: { fontSize: 11, color: '#BBB', textAlign: 'center', paddingVertical: 20, paddingHorizontal: 24 },
+
   customRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 12, paddingVertical: 12,
@@ -358,5 +374,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A5C35', borderRadius: 10,
     paddingVertical: 14, alignItems: 'center',
   },
+  doneBtnDisabled: { opacity: 0.4 },
   doneBtnText: { fontSize: 14, fontWeight: '500', color: '#fff' },
 });

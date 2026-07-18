@@ -4,7 +4,11 @@
       "Bash(node:*)",
       "Bash(npm install:*)",
       "Bash(npx expo:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(node drive.mjs)",
+      "Bash(rm -f screenshots/f-*.png)",
+      "Bash(node seedFeatures.mjs)"
     ]
   }
 }

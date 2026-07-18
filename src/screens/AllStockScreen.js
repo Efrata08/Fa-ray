@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
   StatusBar, TextInput,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
 
@@ -56,7 +57,7 @@ function MedRow({ med, onPress }) {
 // ── screen ─────────────────────────────────────────────────────────────────────
 
 export default function AllStockScreen({ navigation }) {
-  const { medicines, currentTransaction } = useStore();
+  const { medicines } = useStore();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
 
@@ -92,6 +93,13 @@ export default function AllStockScreen({ navigation }) {
           <Text style={styles.headerTitle}>ሁሉም ክምችት</Text>
           <Text style={styles.headerSub}>All stock · {medicines.length} medicines</Text>
         </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('AddMedicine')}
+          style={styles.addBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="plus" size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {/* Search bar */}
@@ -118,19 +126,6 @@ export default function AllStockScreen({ navigation }) {
           )}
         </View>
       </View>
-
-      {/* Transaction banner */}
-      {currentTransaction.length > 0 && (
-        <View style={styles.txBanner}>
-          <Text style={styles.txBannerLeft}>
-            {currentTransaction.length} item{currentTransaction.length !== 1 ? 's' : ''} in transaction
-            {' · '}ETB {currentTransaction.reduce((s, i) => s + i.lineTotal, 0).toFixed(2)}
-          </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SaleRecorded')}>
-            <Text style={styles.txBannerFinish}>ጨርስ · Finish</Text>
-          </TouchableOpacity>
-        </View>
-      )}
 
       <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
         {searching && (
@@ -178,6 +173,7 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   headerTitle: { color: '#fff', fontSize: 16, fontWeight: '600' },
   headerSub: { color: 'rgba(255,255,255,0.6)', fontSize: 11, marginTop: 2 },
+  addBtn: { paddingBottom: 2 },
 
   // Search bar
   searchContainer: {
@@ -212,18 +208,6 @@ const styles = StyleSheet.create({
   },
   noResultsIcon: { fontSize: 28, marginBottom: 10 },
   noResultsText: { fontSize: 13, color: '#BBB', textAlign: 'center' },
-
-  // Transaction banner
-  txBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1A5C35',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  txBannerLeft: { fontSize: 12, color: '#fff', flex: 1 },
-  txBannerFinish: { fontSize: 12, color: '#fff', textDecorationLine: 'underline' },
 
   // Rows
   row: {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, StatusBar,
+  View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
@@ -12,12 +12,21 @@ const NUMPAD_ROWS = [
   ['C', '0', '←'],
 ];
 
+function nowString() {
+  const d = new Date();
+  const h = d.getHours() % 12 || 12;
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = d.getHours() >= 12 ? 'PM' : 'AM';
+  return `Today, ${h}:${m} ${ampm}`;
+}
+
 export default function SaleEntryScreen({ route, navigation }) {
   const { medicineId } = route.params;
-  const { medicines, addToTransaction } = useStore();
+  const { medicines, recordSale } = useStore();
   const insets = useSafeAreaInsets();
 
   const [qtyStr, setQtyStr] = useState('0');
+  const [receipt, setReceipt] = useState(null); // { qty, total, time }
 
   const med = medicines.find(m => m.id === medicineId);
   const qty = parseInt(qtyStr, 10) || 0;
@@ -48,18 +57,79 @@ export default function SaleEntryScreen({ route, navigation }) {
 
   function handleConfirm() {
     if (!canConfirm) return;
-    addToTransaction({
-      medicineId: med.id,
-      nameEnglish: med.name,
-      nameAmharic: med.amharic,
-      code: med.code,
-      quantity: qty,
-      pricePerUnit: med.price,
-      lineTotal: qty * med.price,
-    });
-    navigation.navigate('SaleRecorded');
+    const snap = { qty, total: qty * med.price, time: nowString() };
+    recordSale(med.id, qty);
+    setReceipt(snap);
   }
 
+  function handleNewSale() {
+    setQtyStr('0');
+    setReceipt(null);
+  }
+
+  // ── Confirmation screen ─────────────────────────────────────────────────────
+  if (receipt) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#1A5C35" />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.receiptScroll, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.bigCheck}>✓</Text>
+          <Text style={styles.receiptHeading}>Sale Recorded</Text>
+          <Text style={styles.receiptHeadingAm}>ሽያጭ ተመዝግቧል</Text>
+
+          <View style={styles.card}>
+            <Text style={styles.cardMedName}>{med.name}</Text>
+            <Text style={styles.cardMedAmharic}>{med.amharic}</Text>
+            <Text style={styles.cardCode}>{med.code}</Text>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.cardRow}>
+              <Text style={styles.cardLabel}>Units sold</Text>
+              <Text style={styles.cardValue}>{receipt.qty} units</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardLabel}>Price / unit</Text>
+              <Text style={styles.cardValue}>ETB {med.price.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.cardRow}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>ETB {receipt.total.toFixed(2)}</Text>
+            </View>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.cardRow}>
+              <Text style={styles.cardLabel}>New stock level</Text>
+              <Text style={styles.cardValue}>{med.stock} units</Text>
+            </View>
+            <View style={styles.cardRow}>
+              <Text style={styles.cardLabel}>Recorded at</Text>
+              <Text style={styles.cardValue}>{receipt.time}</Text>
+            </View>
+          </View>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.newSaleBtn} onPress={handleNewSale}>
+              <Text style={styles.newSaleBtnText}>New Sale</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
+              <Text style={styles.doneBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Entry screen ────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A5C35" />
@@ -117,7 +187,7 @@ export default function SaleEntryScreen({ route, navigation }) {
           disabled={!canConfirm}
         >
           <Text style={styles.confirmBtnText}>
-            Confirm · −{qty} units · ETB {total}
+            Confirm · −{qty} units · ETB {total.toFixed(2)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -156,4 +226,36 @@ const styles = StyleSheet.create({
   confirmBtn: { backgroundColor: '#FFF5F5', borderWidth: 0.5, borderColor: '#A32D2D', borderRadius: 8, paddingVertical: 16, alignItems: 'center', minHeight: 52, justifyContent: 'center' },
   confirmBtnDisabled: { opacity: 0.35 },
   confirmBtnText: { color: '#A32D2D', fontSize: 15, fontWeight: '600' },
+
+  // ── Confirmation screen ──
+  receiptScroll: { alignItems: 'center', paddingHorizontal: 20 },
+  bigCheck: { fontSize: 64, color: '#A32D2D' },
+  receiptHeading: { fontSize: 22, fontWeight: '700', color: '#A32D2D', marginTop: 6 },
+  receiptHeadingAm: { fontSize: 14, color: '#A32D2D', opacity: 0.75, marginTop: 3, marginBottom: 20 },
+
+  card: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: '#E0E0E0',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  cardMedName: { fontSize: 15, fontWeight: '600', color: '#111' },
+  cardMedAmharic: { fontSize: 13, color: '#777', marginTop: 2 },
+  cardCode: { fontSize: 11, color: '#AAA', marginTop: 2, marginBottom: 4 },
+  cardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: '#E5E5E5', marginVertical: 10 },
+  cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 3 },
+  cardLabel: { fontSize: 13, color: '#888' },
+  cardValue: { fontSize: 13, color: '#333', fontWeight: '500' },
+  totalLabel: { fontSize: 15, fontWeight: '700', color: '#111' },
+  totalValue: { fontSize: 18, fontWeight: '700', color: '#A32D2D' },
+
+  actionRow: { flexDirection: 'row', width: '100%' },
+  newSaleBtn: { flex: 1, backgroundColor: '#FFF5F5', borderWidth: 0.5, borderColor: '#A32D2D', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginRight: 6 },
+  newSaleBtnText: { color: '#A32D2D', fontSize: 14, fontWeight: '600' },
+  doneBtn: { flex: 1, backgroundColor: '#1A5C35', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginLeft: 6 },
+  doneBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

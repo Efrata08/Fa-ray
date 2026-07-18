@@ -43,8 +43,8 @@ export default function AllSetScreen() {
         {/* Info card */}
         <View style={styles.infoCard}>
           <Text style={styles.infoHeading}>What happens next</Text>
-          <Text style={styles.infoLine}>· Prices are set on your first sale</Text>
-          <Text style={styles.infoLine}>· Add more medicines anytime from profile</Text>
+          <Text style={styles.infoLine}>· Edit a medicine's price anytime from its detail screen</Text>
+          <Text style={styles.infoLine}>· Add more medicines anytime from All Stock</Text>
           <Text style={styles.infoLine}>· Alerts fire when stock runs low</Text>
         </View>
 

@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView,
+  View, Text, TouchableOpacity, TextInput, StyleSheet, StatusBar, ScrollView, Platform,
 } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
+
+function formatExpiry(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 const NUMPAD_ROWS = [
   ['1', '2', '3'],
@@ -26,12 +31,45 @@ export default function RestockEntryScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
 
   const [qtyStr, setQtyStr] = useState('0');
-  const [receipt, setReceipt] = useState(null); // { qty, total, time }
+  const [receipt, setReceipt] = useState(null); // { qty, total, time, expiryDate }
+  const [expiryDate, setExpiryDate] = useState(null); // Date | null — optional per batch
+  const [webExpiryText, setWebExpiryText] = useState(''); // YYYY-MM-DD, non-Android fallback only
 
   const med = medicines.find(m => m.id === medicineId);
   const qty = parseInt(qtyStr, 10) || 0;
   const total = qty * med.price;
   const canConfirm = qty > 0;
+
+  function handlePickExpiry() {
+    const initial = expiryDate || new Date();
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: initial,
+        mode: 'date',
+        minimumDate: new Date(),
+        onValueChange: (event, selectedDate) => {
+          if (event.type === 'set' && selectedDate) setExpiryDate(selectedDate);
+        },
+      });
+    } else {
+      // Android is the real target (Play Store pilot); this text fallback
+      // just keeps the surrounding flow testable/usable elsewhere. Built
+      // from explicit Y/M/D components (local midnight), not `new
+      // Date(string)` — a bare "YYYY-MM-DD" string parses as UTC midnight,
+      // which displays as the previous day in any timezone behind UTC.
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(webExpiryText.trim());
+      if (match) {
+        const [, year, month, day] = match;
+        const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+        if (!isNaN(parsed.getTime())) setExpiryDate(parsed);
+      }
+    }
+  }
+
+  function clearExpiry() {
+    setExpiryDate(null);
+    setWebExpiryText('');
+  }
 
   function handleNumpad(key) {
     if (key === 'C') {
@@ -57,14 +95,15 @@ export default function RestockEntryScreen({ route, navigation }) {
 
   function handleConfirm() {
     if (!canConfirm) return;
-    const snap = { qty, total: qty * med.price, time: nowString() };
-    recordRestock(med.id, qty);
+    const snap = { qty, total: qty * med.price, time: nowString(), expiryDate };
+    recordRestock(med.id, qty, expiryDate ? expiryDate.toISOString() : null);
     setReceipt(snap);
   }
 
   function handleNewRestock() {
     setQtyStr('0');
     setReceipt(null);
+    clearExpiry();
   }
 
   // ── Receipt screen ──────────────────────────────────────────────────────────
@@ -98,6 +137,12 @@ export default function RestockEntryScreen({ route, navigation }) {
               <Text style={styles.cardLabel}>Price / unit</Text>
               <Text style={styles.cardValue}>ETB {med.price.toFixed(2)}</Text>
             </View>
+            {receipt.expiryDate && (
+              <View style={styles.cardRow}>
+                <Text style={styles.cardLabel}>Batch expiry</Text>
+                <Text style={styles.cardValue}>{formatExpiry(receipt.expiryDate)}</Text>
+              </View>
+            )}
 
             <View style={styles.cardDivider} />
 
@@ -119,10 +164,6 @@ export default function RestockEntryScreen({ route, navigation }) {
           </View>
 
           {/* Actions */}
-          <TouchableOpacity style={styles.printBtn} onPress={() => {}}>
-            <Text style={styles.printBtnText}>🖨  Print Receipt</Text>
-          </TouchableOpacity>
-
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.newRestockBtn} onPress={handleNewRestock}>
               <Text style={styles.newRestockBtnText}>New Restock</Text>
@@ -169,6 +210,30 @@ export default function RestockEntryScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.expiryRow}>
+          <TouchableOpacity style={styles.expiryBtn} onPress={handlePickExpiry} activeOpacity={0.7}>
+            <Text style={styles.expiryBtnIcon}>📅</Text>
+            <Text style={expiryDate ? styles.expiryBtnTextSet : styles.expiryBtnText}>
+              {expiryDate ? `Batch expires ${formatExpiry(expiryDate)}` : 'Set batch expiry date (optional)'}
+            </Text>
+          </TouchableOpacity>
+          {expiryDate && (
+            <TouchableOpacity onPress={clearExpiry} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={styles.expiryClear}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {Platform.OS !== 'android' && (
+          <TextInput
+            style={styles.webExpiryInput}
+            value={webExpiryText}
+            onChangeText={setWebExpiryText}
+            onSubmitEditing={handlePickExpiry}
+            placeholder="YYYY-MM-DD (dev/web only)"
+            placeholderTextColor="#BBB"
+          />
+        )}
+
         <View style={styles.numpad}>
           {NUMPAD_ROWS.map((row, ri) => (
             <View key={ri} style={styles.numpadRow}>
@@ -194,7 +259,7 @@ export default function RestockEntryScreen({ route, navigation }) {
           disabled={!canConfirm}
         >
           <Text style={styles.confirmBtnText}>
-            Confirm · +{qty} units · ETB {total}
+            Confirm · +{qty} units · ETB {total.toFixed(2)}
           </Text>
         </TouchableOpacity>
       </View>
@@ -227,6 +292,26 @@ const styles = StyleSheet.create({
   circleBtn: { width: 48, height: 48, borderRadius: 24, borderWidth: 0.5, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center' },
   circleBtnText: { fontSize: 26, color: '#1a1a1a', lineHeight: 30 },
   qtyDisplay: { fontSize: 64, fontWeight: '700', color: '#111', minWidth: 120, textAlign: 'center' },
+
+  expiryRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, marginBottom: 16, paddingHorizontal: 16,
+  },
+  expiryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 0.5, borderColor: '#D4D4D4', borderRadius: 20,
+    paddingVertical: 8, paddingHorizontal: 14,
+  },
+  expiryBtnIcon: { fontSize: 13, marginRight: 6 },
+  expiryBtnText: { fontSize: 12, color: '#888' },
+  expiryBtnTextSet: { fontSize: 12, color: '#1A5C35', fontWeight: '600' },
+  expiryClear: { fontSize: 14, color: '#BBB' },
+  webExpiryInput: {
+    marginHorizontal: 16, marginBottom: 12,
+    borderWidth: 0.5, borderColor: '#D4D4D4', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, color: '#111',
+  },
+
   numpad: { borderTopWidth: 0.5, borderTopColor: '#E5E5E5' },
   numpadRow: { flexDirection: 'row' },
   numKey: { flex: 1, height: 60, alignItems: 'center', justifyContent: 'center', borderRightWidth: 0.5, borderBottomWidth: 0.5, borderColor: '#E5E5E5' },
@@ -261,17 +346,6 @@ const styles = StyleSheet.create({
   cardValue: { fontSize: 13, color: '#333', fontWeight: '500' },
   totalLabel: { fontSize: 15, fontWeight: '700', color: '#111' },
   totalValue: { fontSize: 18, fontWeight: '700', color: '#1A5C35' },
-
-  printBtn: {
-    width: '100%',
-    borderWidth: 0.5,
-    borderColor: '#CCC',
-    borderRadius: 8,
-    paddingVertical: 13,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  printBtnText: { fontSize: 14, color: '#888', fontWeight: '500' },
 
   actionRow: { flexDirection: 'row', width: '100%' },
   newRestockBtn: { flex: 1, backgroundColor: '#F0F7EC', borderWidth: 0.5, borderColor: '#3B6D11', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginRight: 6 },
