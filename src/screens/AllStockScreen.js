@@ -259,16 +259,21 @@ const styles = StyleSheet.create({
 
   // Category chips
   categoryScroll: {
+    flexGrow: 0,
+    height: 44,
     backgroundColor: '#F5F6F5',
     borderBottomWidth: 0.5,
     borderBottomColor: '#E0E0E0',
   },
   categoryScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingBottom: 10,
     gap: 6,
   },
   categoryChip: {
+    flexGrow: 0,
+    alignSelf: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
