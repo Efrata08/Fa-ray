@@ -54,7 +54,7 @@ export default function SetPinScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={styles.brand}>ፍሬ</Text>
         </View>
-        <Text style={styles.stepLabel}>Step 2 of 3</Text>
+        <Text style={styles.stepLabel}>Step 2 of 4</Text>
       </View>
 
       {/* Body */}

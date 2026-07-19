@@ -14,6 +14,7 @@ import WelcomeScreen        from './src/screens/onboarding/WelcomeScreen';
 import PharmacyProfileScreen from './src/screens/onboarding/PharmacyProfileScreen';
 import SetPinScreen         from './src/screens/onboarding/SetPinScreen';
 import ConfirmPinScreen     from './src/screens/onboarding/ConfirmPinScreen';
+import ShelfSetupScreen     from './src/screens/onboarding/ShelfSetupScreen';
 import BuildInventoryScreen from './src/screens/onboarding/BuildInventoryScreen';
 import AllSetScreen         from './src/screens/onboarding/AllSetScreen';
 
@@ -62,6 +63,7 @@ function AppNavigator() {
             <Stack.Screen name="PharmacyProfile"  component={PharmacyProfileScreen} />
             <Stack.Screen name="SetPin"           component={SetPinScreen} />
             <Stack.Screen name="ConfirmPin"       component={ConfirmPinScreen} />
+            <Stack.Screen name="ShelfSetup"       component={ShelfSetupScreen} />
             <Stack.Screen name="BuildInventory"   component={BuildInventoryScreen} />
             <Stack.Screen name="AllSet"           component={AllSetScreen} />
           </>

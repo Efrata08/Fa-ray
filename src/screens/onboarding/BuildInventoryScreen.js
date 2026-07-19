@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MEDICINE_CATALOG } from '../../data/medicineCatalog';
+import { MEDICINE_CATALOG, CATEGORIES } from '../../data/medicineCatalog';
 import { useStore } from '../../context/StoreContext';
 
 function Chip({ med, onRemove }) {
@@ -19,6 +19,28 @@ function Chip({ med, onRemove }) {
       >
         <Feather name="x" size={10} color="#1A5C35" />
       </TouchableOpacity>
+    </View>
+  );
+}
+
+function CategoryPicker({ options, selected, onSelect }) {
+  return (
+    <View style={styles.categoryPicker}>
+      {options.map(cat => {
+        const isSelected = selected === cat;
+        return (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.categoryOption, isSelected && styles.categoryOptionSelected]}
+            onPress={() => onSelect(cat)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.categoryOptionText, isSelected && styles.categoryOptionTextSelected]}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -46,6 +68,7 @@ export default function BuildInventoryScreen({ navigation }) {
   const [customAm, setCustomAm]         = useState('');
   const [customEn, setCustomEn]         = useState('');
   const [customPrice, setCustomPrice]   = useState('');
+  const [customCategory, setCustomCategory] = useState(null);
   const [pendingMed, setPendingMed]     = useState(null); // catalog item awaiting a price before it's added
   const [pendingPrice, setPendingPrice] = useState('');
 
@@ -85,18 +108,20 @@ export default function BuildInventoryScreen({ navigation }) {
 
   function addCustom() {
     const price = parseFloat(customPrice);
-    if (!customAm.trim() || !(price > 0)) return;
+    if (!customAm.trim() || !(price > 0) || !customCategory) return;
     const item = {
       id: `custom_${Date.now()}`,
       name: customEn.trim() || customAm.trim(),
       amharic: customAm.trim(),
       code: 'CUSTOM',
       stock: 0, reorder: 5, price, activity: [],
+      category: customCategory,
     };
     setSelected(prev => [...prev, item]);
     setCustomAm('');
     setCustomEn('');
     setCustomPrice('');
+    setCustomCategory(null);
     setShowCustom(false);
   }
 
@@ -118,7 +143,7 @@ export default function BuildInventoryScreen({ navigation }) {
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={styles.brand}>ፍሬ</Text>
-        <Text style={styles.stepLabel}>Step 3 of 3</Text>
+        <Text style={styles.stepLabel}>Step 4 of 4</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -185,10 +210,12 @@ export default function BuildInventoryScreen({ navigation }) {
                 placeholderTextColor="#BBB"
                 keyboardType="decimal-pad"
               />
+              <Text style={styles.categoryLabel}>Category</Text>
+              <CategoryPicker options={CATEGORIES} selected={customCategory} onSelect={setCustomCategory} />
               <TouchableOpacity
-                style={[styles.customAddBtn, !(customAm.trim() && parseFloat(customPrice) > 0) && { opacity: 0.4 }]}
+                style={[styles.customAddBtn, !(customAm.trim() && parseFloat(customPrice) > 0 && customCategory) && { opacity: 0.4 }]}
                 onPress={addCustom}
-                disabled={!(customAm.trim() && parseFloat(customPrice) > 0)}
+                disabled={!(customAm.trim() && parseFloat(customPrice) > 0 && customCategory)}
               >
                 <Text style={styles.customAddBtnText}>Add</Text>
               </TouchableOpacity>
@@ -352,6 +379,17 @@ const styles = StyleSheet.create({
     borderRadius: 6, paddingVertical: 10, alignItems: 'center',
   },
   customAddBtnText: { fontSize: 13, fontWeight: '500', color: '#fff' },
+
+  categoryLabel: { fontSize: 10, color: '#888', marginTop: 10, marginBottom: 6 },
+  categoryPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  categoryOption: {
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 14, backgroundColor: '#fff',
+    borderWidth: 0.5, borderColor: '#D4D4D4',
+  },
+  categoryOptionSelected: { backgroundColor: '#1A5C35', borderColor: '#1A5C35' },
+  categoryOptionText: { fontSize: 11, color: '#666', fontWeight: '500' },
+  categoryOptionTextSelected: { color: '#fff' },
 
   footer: { paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 0.5, borderTopColor: '#E5E5E5' },
   doneBtn: {

@@ -13,6 +13,19 @@
  * database, not currently read anywhere in the app.
  */
 
+// Therapeutic categories present in the catalog, ordered by how common they
+// are in it (most-stocked first) so the common ones don't require scrolling
+// wherever this list is shown as chips/filters. "Other" always goes last —
+// it's a catch-all (includes non-drug items like gloves/syringes), not a
+// therapeutic class.
+export const CATEGORIES = [
+  'Antibiotic', 'Cardiovascular', 'Vitamin & Supplement', 'Analgesic',
+  'Antifungal', 'Gastrointestinal', 'Neurological', 'Respiratory',
+  'Diabetes', 'Antiparasitic', 'Dermatological', 'Eye & Ear',
+  'Antimalarial', 'Antihistamine', 'Maternal Health', 'Contraceptive',
+  'Other',
+];
+
 export const MEDICINE_CATALOG = [
   { id: 1, name: "Amoxicillin 250mg", amharic: "አሞክሲሲሊን 250 ሚ.ግ", code: "AMX250", stock: 0, reorder: 10, price: 0, activity: [], category: "Antibiotic", unitType: "tablet" },
   { id: 2, name: "Amoxicillin 500mg", amharic: "አሞክሲሲሊን 500 ሚ.ግ", code: "AMX500", stock: 0, reorder: 10, price: 0, activity: [], category: "Antibiotic", unitType: "tablet" },

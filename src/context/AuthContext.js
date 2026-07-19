@@ -7,6 +7,11 @@ export function AuthProvider({ children }) {
   // 'loading' | 'onboarding' | 'login' | 'main'
   const [authState, setAuthState] = useState('loading');
   const [pharmacyName, setPharmacyName] = useState('');
+  // How this pharmacy likes to browse its inventory (set during onboarding's
+  // ShelfSetup step). null means "not chosen" — installs that predate this
+  // feature, or mid-onboarding — and callers should fall back to whatever
+  // their own previous default was, rather than assume a scheme.
+  const [sortPreference, setSortPreferenceState] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -16,7 +21,11 @@ export function AuthProvider({ children }) {
           AsyncStorage.getItem('faray_pharmacy_profile'),
         ]);
         if (rawProfile) {
-          try { setPharmacyName(JSON.parse(rawProfile).name || ''); } catch {}
+          try {
+            const profile = JSON.parse(rawProfile);
+            setPharmacyName(profile.name || '');
+            setSortPreferenceState(profile.sortPreference || null);
+          } catch {}
         }
         setAuthState(done === 'true' ? 'login' : 'onboarding');
       } catch {
@@ -29,7 +38,11 @@ export function AuthProvider({ children }) {
     await AsyncStorage.setItem('faray_setup_complete', 'true');
     const rawProfile = await AsyncStorage.getItem('faray_pharmacy_profile');
     if (rawProfile) {
-      try { setPharmacyName(JSON.parse(rawProfile).name || ''); } catch {}
+      try {
+        const profile = JSON.parse(rawProfile);
+        setPharmacyName(profile.name || '');
+        setSortPreferenceState(profile.sortPreference || null);
+      } catch {}
     }
     setAuthState('login');
   }
@@ -58,7 +71,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ authState, pharmacyName, completeOnboarding, loginSuccess, skipToLogin, logout, resetToOnboarding }}>
+    <AuthContext.Provider value={{ authState, pharmacyName, sortPreference, completeOnboarding, loginSuccess, skipToLogin, logout, resetToOnboarding }}>
       {children}
     </AuthContext.Provider>
   );

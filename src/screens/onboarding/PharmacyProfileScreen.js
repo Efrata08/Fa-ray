@@ -58,7 +58,7 @@ export default function PharmacyProfileScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={styles.brand}>ፍሬ</Text>
         </View>
-        <Text style={styles.stepLabel}>Step 1 of 3</Text>
+        <Text style={styles.stepLabel}>Step 1 of 4</Text>
       </View>
 
       <KeyboardAvoidingView

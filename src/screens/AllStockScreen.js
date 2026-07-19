@@ -6,6 +6,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
+import { useAuth } from '../context/AuthContext';
+import { CATEGORIES } from '../data/medicineCatalog';
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,27 @@ const ROW_BG = {
 };
 
 const STATUS_ORDER = { critical: 0, reorder: 1, ok: 2 };
+
+// Default browse order for this list. Falls back to urgency-first (the
+// original behavior) when the pharmacy hasn't chosen a shelf-organization
+// preference during onboarding — e.g. installs that predate ShelfSetupScreen.
+function sortByPreference(list, pref) {
+  const sorted = [...list];
+  if (pref === 'alphabetical') {
+    return sorted.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  if (pref === 'category') {
+    return sorted.sort((a, b) =>
+      (a.category || '').localeCompare(b.category || '') || a.name.localeCompare(b.name)
+    );
+  }
+  if (pref === 'dosageForm') {
+    return sorted.sort((a, b) =>
+      (a.unitType || '').localeCompare(b.unitType || '') || a.name.localeCompare(b.name)
+    );
+  }
+  return sorted.sort((a, b) => STATUS_ORDER[getStatus(a)] - STATUS_ORDER[getStatus(b)]);
+}
 
 // ── sub-components ─────────────────────────────────────────────────────────────
 
@@ -54,27 +77,62 @@ function MedRow({ med, onPress }) {
   );
 }
 
+// ── CategoryChips ─────────────────────────────────────────────────────────────
+
+function CategoryChips({ options, selected, onSelect }) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.categoryScroll}
+      contentContainerStyle={styles.categoryScrollContent}
+    >
+      {['All', ...options].map(cat => {
+        const isSelected = cat === 'All' ? selected === null : selected === cat;
+        return (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+            onPress={() => onSelect(cat === 'All' ? null : cat)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 // ── screen ─────────────────────────────────────────────────────────────────────
 
 export default function AllStockScreen({ navigation }) {
   const { medicines } = useStore();
+  const { sortPreference } = useAuth();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
+  const [category, setCategory] = useState(null); // null = All
 
   const q = query.trim().toLowerCase();
   const searching = q !== '';
 
-  const sortedMeds = [...medicines].sort(
-    (a, b) => STATUS_ORDER[getStatus(a)] - STATUS_ORDER[getStatus(b)]
-  );
+  const sortedMeds = sortByPreference(medicines, sortPreference);
+
+  const categoryFiltered = category
+    ? sortedMeds.filter(m => m.category === category)
+    : sortedMeds;
 
   const displayMeds = searching
-    ? sortedMeds.filter(m =>
+    ? categoryFiltered.filter(m =>
         m.name.toLowerCase().includes(q) ||
         m.amharic.includes(query.trim()) ||
         m.code.toLowerCase().includes(q)
       )
-    : sortedMeds;
+    : categoryFiltered;
+
+  const filtering = searching || category !== null;
 
   return (
     <View style={styles.container}>
@@ -127,14 +185,16 @@ export default function AllStockScreen({ navigation }) {
         </View>
       </View>
 
+      <CategoryChips options={CATEGORIES} selected={category} onSelect={setCategory} />
+
       <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
-        {searching && (
+        {filtering && (
           <Text style={styles.resultsLabel}>
             {displayMeds.length} results · {displayMeds.length} ውጤቶች
           </Text>
         )}
 
-        {searching && displayMeds.length === 0 ? (
+        {filtering && displayMeds.length === 0 ? (
           <View style={styles.noResults}>
             <Text style={styles.noResultsIcon}>🔍</Text>
             <Text style={styles.noResultsText}>
@@ -196,6 +256,32 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 13, color: '#BBB', marginRight: 7 },
   searchInput: { flex: 1, fontSize: 14, color: '#111', paddingVertical: 0, height: 22 },
   clearBtn: { fontSize: 13, color: '#BBB', paddingLeft: 8 },
+
+  // Category chips
+  categoryScroll: {
+    backgroundColor: '#F5F6F5',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#E0E0E0',
+  },
+  categoryScrollContent: {
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    gap: 6,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: '#E5E5E5',
+  },
+  categoryChipSelected: {
+    backgroundColor: '#1A5C35',
+    borderColor: '#1A5C35',
+  },
+  categoryChipText: { fontSize: 12, color: '#666', fontWeight: '500' },
+  categoryChipTextSelected: { color: '#fff' },
 
   // Results
   resultsLabel: {

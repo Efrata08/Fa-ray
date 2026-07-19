@@ -40,7 +40,7 @@ export default function ConfirmPinScreen({ route, navigation }) {
     if (pin.length !== 4) return;
     if (pin === originalPin) {
       AsyncStorage.setItem('faray_pin', pin).then(() => {
-        navigation.navigate('BuildInventory');
+        navigation.navigate('ShelfSetup');
       });
     } else {
       setError("PINs don't match. Try again.");
@@ -74,7 +74,7 @@ export default function ConfirmPinScreen({ route, navigation }) {
           </TouchableOpacity>
           <Text style={styles.brand}>ፍሬ</Text>
         </View>
-        <Text style={styles.stepLabel}>Step 2 of 3</Text>
+        <Text style={styles.stepLabel}>Step 2 of 4</Text>
       </View>
 
       {/* Body */}
