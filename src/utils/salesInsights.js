@@ -43,18 +43,16 @@ export function getSalesStats(medicine, now = new Date()) {
   };
 }
 
-// Daily sold-units for a bar chart, most-recent maxDays calendar days. Stops
-// at the medicine's own history instead of padding with days before it had
-// any sales, so a brand-new store doesn't show six empty bars.
+// Daily sold-units for a bar chart, always the most recent maxDays calendar
+// days (today back to maxDays-1 days ago), even if sales history is shorter
+// than that — the chart bars use flex:1, so returning fewer than maxDays
+// entries stretches the available bars to fill the full width, which reads
+// as one giant block instead of a sparse week. Only called once
+// MIN_SALES_FOR_FORECAST sales already exist (see hasEnoughData), so this
+// never needs to handle a store with zero sales ever.
 export function getDailySalesWindow(medicine, now = new Date(), maxDays = 7) {
   const sales = saleEntries(medicine);
   if (sales.length === 0) return [];
-
-  const firstSaleTime = Math.min(...sales.map(e => new Date(e.isoDate).getTime()));
-  const daysAvailable = Math.min(
-    maxDays,
-    Math.floor((now.getTime() - firstSaleTime) / MS_PER_DAY) + 1
-  );
 
   const byDayKey = new Map();
   for (const e of sales) {
@@ -64,7 +62,7 @@ export function getDailySalesWindow(medicine, now = new Date(), maxDays = 7) {
   }
 
   const days = [];
-  for (let i = daysAvailable - 1; i >= 0; i--) {
+  for (let i = maxDays - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
     const key = d.toDateString();

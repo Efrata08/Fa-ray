@@ -191,11 +191,21 @@ export default function MedicineDetailScreen({ route, navigation }) {
         </View>
 
         {/* Recent activity */}
-        <Text style={styles.sectionTitle}>Recent activity</Text>
+        <View style={styles.sectionTitleRow}>
+          <Text style={[styles.sectionTitle, { paddingTop: 0, paddingBottom: 0 }]}>Recent activity</Text>
+          {med.activity.length > 5 && (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ActivityHistory', { medicineId: med.id })}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {med.activity.length === 0 ? (
           <Text style={styles.activityEmpty}>No activity yet</Text>
         ) : (
-          med.activity.slice(0, 20).map((entry, i, arr) => (
+          med.activity.slice(0, 5).map((entry, i, arr) => (
             <View
               key={i}
               style={[styles.activityRow, i < arr.length - 1 && styles.activitySep]}
@@ -414,6 +424,15 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 4,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 4,
+  },
+  seeAllText: { fontSize: 12, fontWeight: '600', color: '#1A5C35' },
   activityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

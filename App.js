@@ -25,6 +25,7 @@ import PinLoginScreen from './src/screens/PinLoginScreen';
 import StockListScreen      from './src/screens/StockListScreen';
 import AllStockScreen       from './src/screens/AllStockScreen';
 import MedicineDetailScreen from './src/screens/MedicineDetailScreen';
+import ActivityHistoryScreen from './src/screens/ActivityHistoryScreen';
 import SaleEntryScreen      from './src/screens/SaleEntryScreen';
 import RestockEntryScreen   from './src/screens/RestockEntryScreen';
 import AnalyticsScreen      from './src/screens/AnalyticsScreen';
@@ -78,6 +79,7 @@ function AppNavigator() {
             <Stack.Screen name="StockList"      component={StockListScreen} />
             <Stack.Screen name="AllStock"       component={AllStockScreen} />
             <Stack.Screen name="MedicineDetail" component={MedicineDetailScreen} />
+            <Stack.Screen name="ActivityHistory" component={ActivityHistoryScreen} />
             <Stack.Screen name="SaleEntry"      component={SaleEntryScreen} />
             <Stack.Screen name="RestockEntry"   component={RestockEntryScreen} />
             <Stack.Screen name="Analytics"      component={AnalyticsScreen} />
