@@ -63,24 +63,28 @@ export default function AnalyticsScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.sectionBody}>
-            {stockRisk.map(({ medicine, daysUntilStockout }) => {
-              const isDanger = medicine.stock === 0 || daysUntilStockout <= 2;
+            {stockRisk.map(({ medicine }) => {
+              const isOut = medicine.stock === 0;
               return (
                 <View
                   key={medicine.id}
-                  style={[styles.riskRow, isDanger ? styles.riskRowDanger : styles.riskRowWarning]}
+                  style={[styles.riskRow, isOut ? styles.riskRowDanger : styles.riskRowWarning]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.riskName, isDanger ? styles.dangerText : styles.warningText]}>
+                    <Text style={[styles.riskName, isOut ? styles.dangerText : styles.warningText]}>
                       {medicine.amharic}
                     </Text>
-                    <Text style={[styles.riskSub, isDanger ? styles.dangerText : styles.warningText]}>
-                      Runs out in ~{daysUntilStockout} days
+                    <Text style={[styles.riskSub, isOut ? styles.dangerText : styles.warningText]}>
+                      {isOut ? 'Out of stock' : 'Running low'}
                     </Text>
                   </View>
-                  <Text style={[styles.riskUnits, isDanger ? styles.dangerText : styles.warningText]}>
-                    {medicine.stock} units left
-                  </Text>
+                  {isOut ? (
+                    <View style={styles.outBadge}>
+                      <Text style={styles.outBadgeText}>OUT</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.riskUnits, styles.warningText]}>{medicine.stock} left</Text>
+                  )}
                 </View>
               );
             })}
@@ -197,13 +201,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 5,
   },
-  riskRowDanger: { backgroundColor: '#FFF5F5' },
-  riskRowWarning: { backgroundColor: '#FDF3E2' },
+  riskRowDanger: { backgroundColor: '#FFF5F5', borderLeftWidth: 3, borderLeftColor: '#A32D2D' },
+  riskRowWarning: { backgroundColor: '#FDF3E2', borderLeftWidth: 3, borderLeftColor: '#BA7517' },
   dangerText: { color: '#A32D2D' },
   warningText: { color: '#BA7517' },
   riskName: { fontSize: 11, fontWeight: '500' },
   riskSub: { fontSize: 10, opacity: 0.8, marginTop: 2 },
   riskUnits: { fontSize: 11, fontWeight: '500' },
+  outBadge: {
+    backgroundColor: '#A32D2D',
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  outBadgeText: { fontSize: 10, fontWeight: '600', color: '#fff' },
 
   emptyState: { alignItems: 'center', paddingVertical: 24 },
   emptyCircle: {
@@ -218,19 +229,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: '#EAF3DE',
+    borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
+    marginBottom: 5,
   },
   sellerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   rankCircle: {
-    width: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#EAF3DE',
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: '#3B6D11',
     alignItems: 'center', justifyContent: 'center',
     marginRight: 10,
   },
-  rankText: { fontSize: 10, fontWeight: '600', color: '#1A5C35' },
+  rankText: { fontSize: 11, fontWeight: '600', color: '#fff' },
   sellerName: { fontSize: 11, color: '#111', flexShrink: 1 },
-  sellerUnits: { fontSize: 11, color: '#999' },
+  sellerUnits: { fontSize: 11, fontWeight: '600', color: '#3B6D11' },
 
   noSalesText: { fontSize: 12, color: '#999', textAlign: 'center', paddingVertical: 16 },
 });

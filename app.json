@@ -29,7 +29,15 @@
       }
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
+      ["@react-native-community/datetimepicker", {
+        "android": {
+          "datePicker": {
+            "colorAccent": { "light": "#1A5C35" },
+            "colorControlActivated": { "light": "#1A5C35" },
+            "windowBackground": { "light": "#FFFFFF" }
+          }
+        }
+      }]
     ]
   }
 }

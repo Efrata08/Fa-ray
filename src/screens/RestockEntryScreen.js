@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, TextInput, StyleSheet, StatusBar, ScrollView, Platform, Modal,
+  View, Text, TouchableOpacity, TextInput, StyleSheet, StatusBar, ScrollView, Platform,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../context/StoreContext';
@@ -34,10 +35,12 @@ export default function RestockEntryScreen({ route, navigation }) {
   const [receipt, setReceipt] = useState(null); // { qty, total, time, expiryDate }
   const [expiryDate, setExpiryDate] = useState(null); // Date | null — optional per batch
   const [webExpiryText, setWebExpiryText] = useState(''); // YYYY-MM-DD, non-Android fallback only
-  // Prompted up front, right when this screen opens — expiry is per-batch and
-  // easy to forget once you're focused on typing a quantity, so it's asked
-  // for before that, not left as a button someone has to remember to tap.
-  const [showExpiryPrompt, setShowExpiryPrompt] = useState(true);
+  // Shown after quantity entry, once Confirm is tapped — mirrors the price
+  // popup in AddMedicineScreen (an inline card gating the actual add, not a
+  // native Modal — nesting a native Modal around DateTimePickerAndroid's own
+  // native dialog is what broke the date picker on Android in the first
+  // place, since two native dialogs can't stack reliably).
+  const [showExpiryPrompt, setShowExpiryPrompt] = useState(false);
 
   const med = medicines.find(m => m.id === medicineId);
   const qty = parseInt(qtyStr, 10) || 0;
@@ -51,7 +54,7 @@ export default function RestockEntryScreen({ route, navigation }) {
         value: initial,
         mode: 'date',
         minimumDate: new Date(),
-        onValueChange: (event, selectedDate) => {
+        onChange: (event, selectedDate) => {
           if (event.type === 'set' && selectedDate) setExpiryDate(selectedDate);
         },
       });
@@ -97,8 +100,12 @@ export default function RestockEntryScreen({ route, navigation }) {
     setQtyStr(prev => String((parseInt(prev, 10) || 0) + 1));
   }
 
-  function handleConfirm() {
+  function handleConfirmTap() {
     if (!canConfirm) return;
+    setShowExpiryPrompt(true);
+  }
+
+  function finalizeRestock() {
     const snap = { qty, total: qty * med.price, time: nowString(), expiryDate };
     recordRestock(med.id, qty, expiryDate ? expiryDate.toISOString() : null);
     setReceipt(snap);
@@ -108,7 +115,7 @@ export default function RestockEntryScreen({ route, navigation }) {
     setQtyStr('0');
     setReceipt(null);
     clearExpiry();
-    setShowExpiryPrompt(true);
+    setShowExpiryPrompt(false);
   }
 
   // ── Receipt screen ──────────────────────────────────────────────────────────
@@ -187,54 +194,6 @@ export default function RestockEntryScreen({ route, navigation }) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1A5C35" />
 
-      {/* Expiry prompt — appears immediately when this screen opens, before
-          quantity entry. Skippable (tap backdrop or "Skip"), since not every
-          restock has a printed expiry on hand, but it's front-and-center
-          instead of an easy-to-miss button. */}
-      <Modal visible={showExpiryPrompt} transparent animationType="fade" onRequestClose={() => setShowExpiryPrompt(false)}>
-        <TouchableOpacity style={ep.backdrop} activeOpacity={1} onPress={() => setShowExpiryPrompt(false)}>
-          <TouchableOpacity style={ep.card} activeOpacity={1} onPress={() => {}}>
-            <Text style={ep.icon}>📅</Text>
-            <Text style={ep.title}>When does this batch expire?</Text>
-            <Text style={ep.subtitle}>{med.name} · {med.amharic}</Text>
-
-            {expiryDate ? (
-              <>
-                <View style={ep.setRow}>
-                  <Text style={ep.setRowText}>Batch expires {formatExpiry(expiryDate)}</Text>
-                </View>
-                <TouchableOpacity style={ep.primaryBtn} onPress={() => setShowExpiryPrompt(false)}>
-                  <Text style={ep.primaryBtnText}>Continue</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handlePickExpiry}>
-                  <Text style={ep.changeText}>Change date</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity style={ep.primaryBtn} onPress={handlePickExpiry}>
-                  <Text style={ep.primaryBtnText}>Pick a date</Text>
-                </TouchableOpacity>
-                {Platform.OS !== 'android' && (
-                  <TextInput
-                    style={ep.webInput}
-                    value={webExpiryText}
-                    onChangeText={setWebExpiryText}
-                    onSubmitEditing={handlePickExpiry}
-                    placeholder="YYYY-MM-DD (dev/web only)"
-                    placeholderTextColor="#BBB"
-                  />
-                )}
-              </>
-            )}
-
-            <TouchableOpacity onPress={() => setShowExpiryPrompt(false)}>
-              <Text style={ep.skipText}>Skip · I don't know</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -263,59 +222,78 @@ export default function RestockEntryScreen({ route, navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.expiryRow}>
-          <TouchableOpacity style={styles.expiryBtn} onPress={handlePickExpiry} activeOpacity={0.7}>
-            <Text style={styles.expiryBtnIcon}>📅</Text>
-            <Text style={expiryDate ? styles.expiryBtnTextSet : styles.expiryBtnText}>
-              {expiryDate ? `Batch expires ${formatExpiry(expiryDate)}` : 'Set batch expiry date (optional)'}
+        {!showExpiryPrompt ? (
+          <View style={styles.numpad}>
+            {NUMPAD_ROWS.map((row, ri) => (
+              <View key={ri} style={styles.numpadRow}>
+                {row.map(key => (
+                  <TouchableOpacity
+                    key={key}
+                    style={styles.numKey}
+                    onPress={() => handleNumpad(key)}
+                    activeOpacity={0.55}
+                  >
+                    <Text style={styles.numKeyText}>{key}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={xf.wrap}>
+            <View style={xf.titleRow}>
+              <Feather name="calendar" size={15} color="#1A5C35" style={{ marginRight: 6 }} />
+              <Text style={xf.title}>የባች ማብቂያ ቀን · Batch expiry date</Text>
+            </View>
+            <Text style={xf.subtitle}>{med.name} · {med.amharic}</Text>
+
+            <TouchableOpacity style={xf.dateRow} onPress={handlePickExpiry} activeOpacity={0.7}>
+              <Feather name="calendar" size={14} color={expiryDate ? '#1A5C35' : '#999'} style={{ marginRight: 8 }} />
+              <Text style={expiryDate ? xf.dateSetText : xf.datePlaceholder}>
+                {expiryDate ? `ያበቃል · Expires ${formatExpiry(expiryDate)}` : 'ቀን ይምረጡ · Select date'}
+              </Text>
+            </TouchableOpacity>
+
+            {Platform.OS !== 'android' && (
+              <TextInput
+                style={xf.webInput}
+                value={webExpiryText}
+                onChangeText={setWebExpiryText}
+                onSubmitEditing={handlePickExpiry}
+                placeholder="YYYY-MM-DD (dev/web only)"
+                placeholderTextColor="#BBB"
+              />
+            )}
+
+            <View style={xf.btnRow}>
+              <TouchableOpacity style={xf.skipBtn} onPress={finalizeRestock}>
+                <Text style={xf.skipBtnText}>ዝለል · Skip</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[xf.continueBtn, !expiryDate && xf.continueBtnDisabled]}
+                onPress={finalizeRestock}
+                disabled={!expiryDate}
+              >
+                <Text style={xf.continueBtnText}>ቀጥል · Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {!showExpiryPrompt && (
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity
+            style={[styles.confirmBtn, !canConfirm && styles.confirmBtnDisabled]}
+            onPress={handleConfirmTap}
+            disabled={!canConfirm}
+          >
+            <Text style={styles.confirmBtnText}>
+              Confirm · +{qty} units · ETB {total.toFixed(2)}
             </Text>
           </TouchableOpacity>
-          {expiryDate && (
-            <TouchableOpacity onPress={clearExpiry} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={styles.expiryClear}>✕</Text>
-            </TouchableOpacity>
-          )}
         </View>
-        {Platform.OS !== 'android' && (
-          <TextInput
-            style={styles.webExpiryInput}
-            value={webExpiryText}
-            onChangeText={setWebExpiryText}
-            onSubmitEditing={handlePickExpiry}
-            placeholder="YYYY-MM-DD (dev/web only)"
-            placeholderTextColor="#BBB"
-          />
-        )}
-
-        <View style={styles.numpad}>
-          {NUMPAD_ROWS.map((row, ri) => (
-            <View key={ri} style={styles.numpadRow}>
-              {row.map(key => (
-                <TouchableOpacity
-                  key={key}
-                  style={styles.numKey}
-                  onPress={() => handleNumpad(key)}
-                  activeOpacity={0.55}
-                >
-                  <Text style={styles.numKeyText}>{key}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-        </View>
-      </View>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity
-          style={[styles.confirmBtn, !canConfirm && styles.confirmBtnDisabled]}
-          onPress={handleConfirm}
-          disabled={!canConfirm}
-        >
-          <Text style={styles.confirmBtnText}>
-            Confirm · +{qty} units · ETB {total.toFixed(2)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
@@ -345,25 +323,6 @@ const styles = StyleSheet.create({
   circleBtn: { width: 48, height: 48, borderRadius: 24, borderWidth: 0.5, borderColor: '#CCC', alignItems: 'center', justifyContent: 'center' },
   circleBtnText: { fontSize: 26, color: '#1a1a1a', lineHeight: 30 },
   qtyDisplay: { fontSize: 64, fontWeight: '700', color: '#111', minWidth: 120, textAlign: 'center' },
-
-  expiryRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 10, marginBottom: 16, paddingHorizontal: 16,
-  },
-  expiryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5, borderColor: '#D4D4D4', borderRadius: 20,
-    paddingVertical: 8, paddingHorizontal: 14,
-  },
-  expiryBtnIcon: { fontSize: 13, marginRight: 6 },
-  expiryBtnText: { fontSize: 12, color: '#888' },
-  expiryBtnTextSet: { fontSize: 12, color: '#1A5C35', fontWeight: '600' },
-  expiryClear: { fontSize: 14, color: '#BBB' },
-  webExpiryInput: {
-    marginHorizontal: 16, marginBottom: 12,
-    borderWidth: 0.5, borderColor: '#D4D4D4', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, color: '#111',
-  },
 
   numpad: { borderTopWidth: 0.5, borderTopColor: '#E5E5E5' },
   numpadRow: { flexDirection: 'row' },
@@ -407,54 +366,42 @@ const styles = StyleSheet.create({
   doneBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });
 
-// ── Expiry prompt modal ──────────────────────────────────────────────────────
-const ep = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(10,20,14,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 340,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
-  icon: { fontSize: 28, marginBottom: 8 },
-  title: { fontSize: 15, fontWeight: '600', color: '#111', textAlign: 'center' },
-  subtitle: { fontSize: 12, color: '#888', textAlign: 'center', marginTop: 3, marginBottom: 18 },
-
-  primaryBtn: {
-    backgroundColor: '#1A5C35',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    alignItems: 'center',
-    width: '100%',
-  },
-  primaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-
-  setRow: {
+// ── Expiry step card — styled to match AddMedicineScreen's priceForm ───────────
+const xf = StyleSheet.create({
+  wrap: {
     backgroundColor: '#F0F7EC',
-    borderWidth: 0.5, borderColor: '#1A5C35',
-    borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14,
-    width: '100%', marginBottom: 12,
+    borderWidth: 1, borderColor: '#1A5C35',
+    borderRadius: 10, padding: 14,
+    marginHorizontal: 16,
   },
-  setRowText: { fontSize: 13, color: '#1A5C35', fontWeight: '600', textAlign: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center' },
+  title: { fontSize: 13, fontWeight: '600', color: '#111' },
+  subtitle: { fontSize: 11, color: '#888', marginTop: 1, marginBottom: 12 },
 
-  changeText: { fontSize: 12, color: '#888', marginTop: 12, textDecorationLine: 'underline' },
+  dateRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 0.5, borderColor: '#D4D4D4',
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10,
+  },
+  datePlaceholder: { fontSize: 13, color: '#888' },
+  dateSetText: { fontSize: 13, color: '#1A5C35', fontWeight: '600' },
 
   webInput: {
-    marginTop: 12,
-    width: '100%',
+    marginTop: 8,
     borderWidth: 0.5, borderColor: '#D4D4D4', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#111', textAlign: 'center',
+    paddingHorizontal: 10, paddingVertical: 8, fontSize: 12, color: '#111',
   },
 
-  skipText: { fontSize: 12, color: '#BBB', marginTop: 18 },
+  btnRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  skipBtn: {
+    flex: 1, borderRadius: 6, paddingVertical: 10, alignItems: 'center',
+    backgroundColor: '#FFF5F5', borderWidth: 0.5, borderColor: '#A32D2D',
+  },
+  skipBtnText: { fontSize: 13, fontWeight: '600', color: '#A32D2D' },
+  continueBtn: {
+    flex: 1, backgroundColor: '#1A5C35', borderRadius: 6, paddingVertical: 10, alignItems: 'center',
+  },
+  continueBtnDisabled: { opacity: 0.4 },
+  continueBtnText: { fontSize: 13, fontWeight: '500', color: '#fff' },
 });
