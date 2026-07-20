@@ -210,7 +210,7 @@ export default function MedicineDetailScreen({ route, navigation }) {
               key={i}
               style={[styles.activityRow, i < arr.length - 1 && styles.activitySep]}
             >
-              <Text style={[styles.activityChange, { color: entry.type === 'sale' ? '#A32D2D' : '#3B6D11' }]}>
+              <Text style={[styles.activityChange, { color: entry.type === 'sale' ? '#555' : '#3B6D11' }]}>
                 {entry.type === 'sale' ? `−${entry.qty} sold` : `+${entry.qty} restocked`}
               </Text>
               <Text style={styles.activityTime}>{entry.displayTime}</Text>
@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     minHeight: 48,
   },
-  soldBtn: { backgroundColor: '#FFF5F5', borderColor: '#A32D2D', marginRight: 8 },
-  soldBtnText: { color: '#A32D2D', fontSize: 15, fontWeight: '600' },
+  soldBtn: { backgroundColor: '#F5F6F5', borderColor: '#999', marginRight: 8 },
+  soldBtnText: { color: '#555', fontSize: 15, fontWeight: '600' },
   restockBtn: { backgroundColor: '#F0F7EC', borderColor: '#3B6D11', marginLeft: 8 },
   restockBtnText: { color: '#3B6D11', fontSize: 15, fontWeight: '600' },
 

@@ -40,7 +40,7 @@ export default function ActivityHistoryScreen({ route, navigation }) {
               key={i}
               style={[styles.activityRow, i < arr.length - 1 && styles.activitySep]}
             >
-              <Text style={[styles.activityChange, { color: entry.type === 'sale' ? '#A32D2D' : '#3B6D11' }]}>
+              <Text style={[styles.activityChange, { color: entry.type === 'sale' ? '#555' : '#3B6D11' }]}>
                 {entry.type === 'sale' ? `−${entry.qty} sold` : `+${entry.qty} restocked`}
               </Text>
               <Text style={styles.activityTime}>{entry.displayTime}</Text>
