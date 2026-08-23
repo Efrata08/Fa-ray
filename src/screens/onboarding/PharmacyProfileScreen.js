@@ -39,7 +39,7 @@ export default function PharmacyProfileScreen({ navigation }) {
       location: location.trim(),
       phone: phone.trim(),
     }));
-    navigation.navigate('SetPin');
+    navigation.navigate('CreateAccount');
   }
 
   return (

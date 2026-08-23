@@ -38,10 +38,10 @@ export default function WelcomeScreen({ navigation }) {
 
         <TouchableOpacity
           style={styles.signInLink}
-          onPress={skipToLogin}
+          onPress={() => navigation.navigate('SignIn')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Text style={styles.signInText}>Already set up? Sign in</Text>
+          <Text style={styles.signInText}>Already have an account? Sign in</Text>
         </TouchableOpacity>
       </View>
     </View>

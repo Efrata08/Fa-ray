@@ -18,8 +18,10 @@ import ShelfSetupScreen     from './src/screens/onboarding/ShelfSetupScreen';
 import BuildInventoryScreen from './src/screens/onboarding/BuildInventoryScreen';
 import AllSetScreen         from './src/screens/onboarding/AllSetScreen';
 
-// Auth
-import PinLoginScreen from './src/screens/PinLoginScreen';
+// Auth screens
+import PinLoginScreen    from './src/screens/PinLoginScreen';
+import CreateAccountScreen from './src/screens/auth/CreateAccountScreen';
+import SignInScreen       from './src/screens/auth/SignInScreen';
 
 // Main app
 import StockListScreen      from './src/screens/StockListScreen';
@@ -60,13 +62,28 @@ function AppNavigator() {
       >
         {authState === 'onboarding' && (
           <>
-            <Stack.Screen name="Welcome"          component={WelcomeScreen} />
-            <Stack.Screen name="PharmacyProfile"  component={PharmacyProfileScreen} />
-            <Stack.Screen name="SetPin"           component={SetPinScreen} />
-            <Stack.Screen name="ConfirmPin"       component={ConfirmPinScreen} />
-            <Stack.Screen name="ShelfSetup"       component={ShelfSetupScreen} />
-            <Stack.Screen name="BuildInventory"   component={BuildInventoryScreen} />
-            <Stack.Screen name="AllSet"           component={AllSetScreen} />
+            <Stack.Screen name="Welcome"         component={WelcomeScreen} />
+            <Stack.Screen name="PharmacyProfile" component={PharmacyProfileScreen} />
+            <Stack.Screen name="CreateAccount"   component={CreateAccountScreen} />
+            <Stack.Screen name="SignIn"          component={SignInScreen} />
+            <Stack.Screen name="SetPin"          component={SetPinScreen} />
+            <Stack.Screen name="ConfirmPin"      component={ConfirmPinScreen} />
+            <Stack.Screen name="ShelfSetup"      component={ShelfSetupScreen} />
+            <Stack.Screen name="BuildInventory"  component={BuildInventoryScreen} />
+            <Stack.Screen name="AllSet"          component={AllSetScreen} />
+          </>
+        )}
+
+        {/* New device: sign in with email */}
+        {authState === 'account_login' && (
+          <Stack.Screen name="SignIn" component={SignInScreen} />
+        )}
+
+        {/* New device: set up PIN after email sign-in */}
+        {authState === 'set_pin' && (
+          <>
+            <Stack.Screen name="SetPin"     component={SetPinScreen} />
+            <Stack.Screen name="ConfirmPin" component={ConfirmPinScreen} />
           </>
         )}
 

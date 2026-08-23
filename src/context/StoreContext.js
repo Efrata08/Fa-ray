@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autoSaveBackup, autoSaveToDownloads } from '../utils/exportData';
 import { createBatch, decrementBatchesFEFO, scheduleExpiryAlert, cancelExpiryAlert } from '../utils/batches';
+import { enqueueEvent, sync, markEventsApplied } from '../utils/syncEngine';
 
 function formatActivityTime(date) {
   const now = new Date();
@@ -66,6 +68,9 @@ export function StoreProvider({ children }) {
   // INITIAL_MEDICINES stays as the fallback until onboarding calls setInventory.
   const [medicines, setMedicines] = useState(INITIAL_MEDICINES);
   const [medicinesLoaded, setMedicinesLoaded] = useState(false);
+  // Ref so the AppState handler always sees the latest medicines without being
+  // in its dependency array (which would re-register the listener on every change).
+  const medicinesRef = useRef(medicines);
 
   useEffect(() => {
     AsyncStorage.getItem('faray_medicines').then(raw => {
@@ -87,10 +92,23 @@ export function StoreProvider({ children }) {
   // doesn't clobber onboarding's write with the INITIAL_MEDICINES fallback.
   useEffect(() => {
     if (!medicinesLoaded) return;
+    medicinesRef.current = medicines;
     AsyncStorage.setItem('faray_medicines', JSON.stringify(medicines));
     autoSaveBackup(medicines);
     autoSaveToDownloads(medicines);
   }, [medicines, medicinesLoaded]);
+
+  // Sync with the server whenever the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'active') {
+        sync(medicinesRef.current)
+          .then(({ pulled }) => { if (pulled.length > 0) applyRemoteEvents(pulled); })
+          .catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function recordSale(id, qty) {
     const now = new Date();
@@ -134,6 +152,15 @@ export function StoreProvider({ children }) {
     });
 
     depletedNotificationIds.forEach(cancelExpiryAlert);
+
+    const medicine = medicines.find(m => m.id === id);
+    enqueueEvent({
+      medicineLocalId: id,
+      type: 'sale',
+      qty,
+      pricePerUnit: medicine?.price ?? null,
+      occurredAt: now.toISOString(),
+    }).catch(() => {});
   }
 
   function recordRestock(id, qty, expiryDate) {
@@ -178,6 +205,13 @@ export function StoreProvider({ children }) {
         });
       }
     }
+
+    enqueueEvent({
+      medicineLocalId: id,
+      type: 'restock',
+      qty,
+      occurredAt: now.toISOString(),
+    }).catch(() => {});
   }
 
   function setInventory(list) {
@@ -188,12 +222,47 @@ export function StoreProvider({ children }) {
     setMedicines(prev => [...prev, ...newItems]);
   }
 
+  // Apply events that arrived from other devices. Skips notifications (those
+  // were already sent on the originating device) and re-enqueueing (they're
+  // already on the server). Remote restocks don't create local batch objects
+  // because we don't have expiry info in the activity_log — stock totals are
+  // correct but FEFO only applies to batches entered on this device.
+  function applyRemoteEvents(events) {
+    setMedicines(prev => {
+      let next = prev;
+      for (const event of events) {
+        next = next.map(m => {
+          if (m.id !== event.localMedicineId) return m;
+          const delta = event.type === 'sale' ? -event.qty : event.qty;
+          const entry = {
+            type: event.type,
+            qty: event.qty,
+            ...(event.type === 'sale' && { pricePerUnit: event.pricePerUnit }),
+            isoDate: event.occurredAt,
+            displayTime: formatActivityTime(new Date(event.occurredAt)),
+          };
+          const activity = [...m.activity, entry]
+            .sort((a, b) => new Date(b.isoDate) - new Date(a.isoDate));
+          return { ...m, stock: m.stock + delta, activity };
+        });
+      }
+      return next;
+    });
+    markEventsApplied(events.map(e => e.clientEventId)).catch(() => {});
+  }
+
+  async function syncNow() {
+    const result = await sync(medicines);
+    if (result.pulled.length > 0) applyRemoteEvents(result.pulled);
+    return result;
+  }
+
   function updatePrice(id, price) {
     setMedicines(prev => prev.map(m => m.id === id ? { ...m, price } : m));
   }
 
   return (
-    <StoreContext.Provider value={{ medicines, setInventory, addMedicines, updatePrice, recordSale, recordRestock }}>
+    <StoreContext.Provider value={{ medicines, setInventory, addMedicines, updatePrice, recordSale, recordRestock, syncNow }}>
       {children}
     </StoreContext.Provider>
   );
