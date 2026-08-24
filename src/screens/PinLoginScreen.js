@@ -28,7 +28,7 @@ function PinDots({ entered, error }) {
 
 export default function PinLoginScreen() {
   const insets = useSafeAreaInsets();
-  const { loginSuccess, pharmacyName, resetToOnboarding } = useAuth();
+  const { loginSuccess, showAccountLogin, pharmacyName, resetToOnboarding } = useAuth();
 
   const [pin, setPin]         = useState('');
   const [error, setError]     = useState('');
@@ -78,7 +78,14 @@ export default function PinLoginScreen() {
   }
 
   function handleHelp() {
-    Alert.alert('Recovery coming soon', '', [{ text: 'OK' }]);
+    Alert.alert(
+      'Forgot your PIN?',
+      'Sign in with your email and password to access your account on this device.',
+      [
+        { text: 'Sign in with email', onPress: showAccountLogin },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   }
 
   function devReset() {

@@ -6,6 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PinPad from '../../components/PinPad';
+import { useAuth } from '../../context/AuthContext';
 
 function PinDots({ entered, error }) {
   return (
@@ -28,6 +29,7 @@ function PinDots({ entered, error }) {
 export default function ConfirmPinScreen({ route, navigation }) {
   const { pin: originalPin } = route.params;
   const insets = useSafeAreaInsets();
+  const { authState, loginSuccess } = useAuth();
   const [pin, setPin]     = useState('');
   const [error, setError] = useState('');
 
@@ -40,7 +42,13 @@ export default function ConfirmPinScreen({ route, navigation }) {
     if (pin.length !== 4) return;
     if (pin === originalPin) {
       AsyncStorage.setItem('faray_pin', pin).then(() => {
-        navigation.navigate('ShelfSetup');
+        // In set_pin state the user is already authenticated via email —
+        // go straight to the app instead of continuing the onboarding flow.
+        if (authState === 'set_pin') {
+          loginSuccess();
+        } else {
+          navigation.navigate('ShelfSetup');
+        }
       });
     } else {
       setError("PINs don't match. Try again.");
